@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    function formatDate(now) {
+        let Y=now.getFullYear();
+        let M=now.getMonth()+1;
+        let D=now.getDate();
+        let h=now.getHours();
+        let m=now.getMinutes();
+        let s=now.getSeconds();
+        return Y+"-"+M+"-"+D+" "+h+":"+m+":"+s;
+    }
+    var d = new Date(1510647970678);
+    console.log(formatDate(d));
+</script>
+</body>
+</html>

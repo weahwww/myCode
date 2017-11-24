@@ -1,0 +1,15 @@
+// margin and padding
+// -----------------------------
+list = 0 5 10 15 20 25 30
+dir = none top right bottom left
+type = padding margin
+
+m(i,a, b)
+  i = unit(i, px)
+  t = (a!='none')? '-'+a : ''
+  .{b}{t}{i}
+      {b}{t}: i
+for d in dir
+  for l in list
+    for t in type
+      m(l,d,t)

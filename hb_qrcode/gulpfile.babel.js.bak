@@ -1,0 +1,138 @@
+import source from 'vinyl-source-stream';
+import gulp from 'gulp';
+import cleanCSS from 'gulp-clean-css';
+import uglify from 'gulp-uglify';
+import browserify from 'browserify';
+import babelify from 'babelify';
+import stylus from 'gulp-stylus';
+import eslint from 'gulp-eslint';
+import rename from 'gulp-rename';
+import combiner from 'stream-combiner2';
+
+const paths = {
+	vendor: 'vendor.js',
+	srcJSX: 'src/jsx/',
+	dist: 'static/js/'
+};
+
+// react-es6
+function buildJsxES6(src, jsx) {
+	browserify(`${paths.srcJSX}` + src, {
+			debug: true
+		})
+		.external('react')
+		.external('react-dom')
+		.transform(babelify, {
+			presets: ['env', 'react']
+		})
+		.bundle()
+		.on("error", function(err) {
+			console.log("Error : " + err.message);
+		})
+		.pipe(source(jsx))
+		.pipe(gulp.dest(`${paths.dist}/`));
+}
+
+// JSX2JS
+function jsxtoJs(src, jsx) {
+	browserify(`${paths.srcJSX}` + src, {
+			debug: true
+		})
+		.transform(babelify, {
+			presets: ['es2015', 'es2016', 'latest']
+		})
+		.bundle()
+		.on("error", function(err) {
+			console.log("Error : " + err.message);
+		})
+		.pipe(source(jsx))
+		.pipe(gulp.dest(`${paths.dist}/`));
+}
+
+// minify-js
+function miniJS(src, file) {
+	let combined = combiner.obj([
+		gulp.src(`${paths.dist}/${src}/${file}`),
+		uglify(),
+		rename({ extname:'.min.js'}),
+		gulp.dest(`${paths.dist}/${src}`)
+	]);
+	combined.on('error',console.error.bind(console));
+	return combined;
+}
+
+// include-css
+gulp.task('include-css', () => {
+	gulp.src(`${paths.dist}css/stylus/*.styl`)
+		.pipe(stylus({
+			'include css': true
+		}))
+		.pipe(gulp.dest(`${paths.dist}css/`))
+});
+
+// cleanCSS
+gulp.task('minify-css', () => {
+	return gulp.src([`${paths.dist}css/*.css`, `${paths.dist}css/**/*.css`])
+		.pipe(cleanCSS({
+			compatibility: 'ie8'
+		}))
+		.pipe(gulp.dest(`${paths.dist}css/`));
+});
+
+// cleanJS
+gulp.task('minify-js', () => {
+	return gulp.src([`${paths.dist}js/*.js`, `${paths.dist}js/**/*.js`])
+		.pipe(uglify())
+		.pipe(gulp.dest(`${paths.dist}/`))
+});
+
+
+gulp.task('browserify-vendor', () => {
+	browserify({
+			debug: true
+		})
+		// .require('./node_modules/jquery/dist/jquery.min.js',{
+		// 	expose:'jquery'
+		// })
+		// .require('./node_modules/bootstrap/dist/js/bootstrap.min.js',{
+		// 	expose:'bootstrap'
+		// })
+        .require('./node_modules/react/react.js', {
+            expose: 'react'
+        })
+        .require('./node_modules/react-dom/index.js', {
+            expose: 'react-dom'
+        })
+
+		.bundle()
+		.pipe(source(`${paths.vendor}`))
+		.pipe(gulp.dest(`${paths.dist}/`));
+});
+
+
+//-----------ES6 start ----------------------
+// 二维码生成
+gulp.task('hb_qrcode-qrcode', buildJsxES6.bind(this, 'hb_qrcode/qrcode.jsx', 'hb_qrcode/qrcode.js'));
+
+gulp.task('min_hb_qrcode',miniJS.bind(this, 'hb_qrcode','qrcode.js'));
+//----------ES6 end--------------------------
+
+gulp.task('browserify:watch', function() {
+	// -----------------------ES6 start------------------------------------
+	gulp.watch('src/jsx/hb_qrcode/qrcode.jsx', ['hb_qrcode-qrcode']);
+	gulp.watch('static/js/hb_qrcode/qrcode.js', ['min_hb_qrcode']);
+
+	//------------------------ES6 end--------------------------------------
+});
+
+gulp.task('build-all', [
+	//-------ES6 start--------------
+	'browserify-vendor',
+
+	'hb_qrcode-qrcode',
+	'min_hb_qrcode'
+
+	//------ES6 end----------------
+]);
+
+gulp.task('default-es6', ['build-all', 'browserify:watch']);
