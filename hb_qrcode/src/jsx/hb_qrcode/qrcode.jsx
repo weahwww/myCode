@@ -64,7 +64,6 @@ class MainPanel extends React.Component{
         let timestamp = new Date().getTime();
         let r = {
             product,
-            num: 1,
             phone,
             price,
             timestamp

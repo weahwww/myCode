@@ -7,191 +7,42 @@ class MainPanel extends React.Component{
         super();
         this.state ={
             start:false,
-            config:[
-                {id:"1",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"2",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"3",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"4",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"5",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"6",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"7",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"8",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"9",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"10",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"11",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"12",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"13",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"14",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"15",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"16",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"17",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"18",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"19",product:"",price:"",mobile:"",interval:"600000"},
-                {id:"20",product:"",price:"",mobile:"",interval:"600000"},
+            task:[],
+            list:[
+                {id:"1",product:"jyk",price:"100",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                {id:"2",product:"phone",price:"1000",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"3",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"4",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"5",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"6",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"7",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"8",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"9",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"10",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"11",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"12",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"13",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"14",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"15",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"16",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"17",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"18",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"19",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
+                // {id:"20",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
                 ],
         };
-        this.loadConfig = this.loadConfig.bind(this);
-
-
     }
 
-    componentDidMount(){
-        this.loadConfig();
-    }
-
-    loadConfig(){
-        $.post('/api/qrcode/config')
-            .done((d)=>{
-                let {status,data} = JSON.parse(d);
-                if(status === "ok"){
-                    this.setState({config:data})
-                }else{
-                    alert('加载配置失败')
-                }
-            })
-            .fail(()=>{
-                alert('加载配置异常')
-            })
-    }
-
-
-
-    // 发送号码和价格
-    sendPhonePrice(phone,price,product) {
-        let timestamp = new Date().getTime();
-        let r = {
-            product,
-            num: 1,
-            phone,
-            price,
-            timestamp
-        };
-        console.log(r);
-        $.post("/api/qrcode/submit", JSON.stringify(r))
-            .done((m)=>{
-                let {msg} = JSON.parse(m);
-                if (msg === "ok") {
-                    this.loadCodeList();
-                }else{
-                    console.log('发送失败,请稍候再试!');
-                }
-            })
-
-            .fail(()=> {
-                console.log('服务器获取信息失败');
-            });
-    }
-
-    // 设置回调结果
-    onSetCodeState(create_time, st){
-        $.post('/api/qrcode/callback', JSON.stringify({create_time, status:st}))
-            .done((d)=>{
-                const {status} = JSON.parse(d);
-                if(status === 'ok'){
-                    if(st !== 'used'){
-                        alert(`设置成功`);
-                    }
-                    this.loadCodeList();
-                }else{
-                    if(st !== 'used'){
-                        alert('设置失败');
-                    }
-                }
-            })
-            .fail(() =>{
-                alert('设置异常');
-            });
-    }
-
-    // 开始运行
-    onStartTask(){
-        this.setState({start:true});
-    }
-
-    // 停止刷新
-    onStopTask(){
-        let {task} = this.state;
-        clearInterval(task);
-        this.setState({task:null,refresh:false})
-    }
-
-    // 设置弹窗
-    onShowConfig(cur_tab){
-        this.setState({cur_tab});
-        this.loadCodeList();
-    }
-
-    // 取码弹窗
-    onSetConfig(i){
-        let {code_list} = this.state;
-        let [{image,create_time}, show_type] = [code_list[i],{title:"取码",code:"getCode"}];
-        this.setState({cur_data:{image,create_time},show_type});
-        this.onSetCodeState(code_list[i].create_time,'used');
-        $('#modal').modal("show");
-    }
-
-
-    render(){
-        const {config,start} = this.state;
-        const s_map = {running:"生成中",used: "已取码", wait: "未取码", finish: "完成",fail:"失败"};
-        const style_map = {running:"text-primary",used:"",wait:"text-danger",finish:"text-success",fail:"text-danger"};
-        let startNodes = start ? "disabled" : "";
-        let codeNodes = config.map((d,i) =>{
-            return <QRcodePanel key={i} data={d} start={start}/>
-        });
-        return<section className="wrapper">
-            <div className="row">
-                <div className="col-lg-12">
-                    <section className="panel row">
-                        <div className="panel-body">
-                            <span className="pull-right margin-right10" style={{marginBottom:"-5px"}}>
-                                <a className={`btn btn-success btn-sm ${startNodes}`} href="javascript:void(0);" onClick={this.onStartTask.bind(this)}><i className="fa fa-play"/> 开始</a>
-                                <a href="javascript:void(0);" className="btn btn-primary btn-sm" onClick={this.onShowConfig.bind(this)}><i className="fa fa-plus fa-lg"/></a>
-                            </span>
-                        </div>
-                    </section>
-
-                    <section className="panel row">
-                        {codeNodes}
-                    </section>
-
-                    {/*<ModalPanel config={config} onSetConfig={this.onSetConfig.bind(this)}/>*/}
-                </div>
-            </div>
-        </section>
-    }
-}
-
-class QRcodePanel extends React.Component{
-    constructor(props){
-        super(props);
-        this.state={
-            qrcode:"/img/fail.png",
-            timestamp:"",
-        };
-        this.onCheckTaskRun();
-    }
-
-    // componentWillMount(){
-    //     this.onCheckTaskRun();
-    // }
-
-    // 是否运行任务
-    onCheckTaskRun(){
-        if(this.props.start){
-            alert(111);
-        }
-    }
-
-    // 加载二维码
-    loadCode(){
-        $.post('/api/qrcode/summary',JSON.stringify(this.props.data))
+    // 发送生成二维码请求
+    handleCreateCode(data){
+        $.post('/api/qrcode/submit',JSON.stringify(data))
             .done((d) => {
-                const {msg, data} = JSON.parse(d);
+                const {msg, img} = JSON.parse(d);
                 if(msg === 'ok'){
-                    this.setState({
-                        qrcode:data,
-                    });
+                    // list[i].img = img;
+                    data.status = true;
+                    data.img = img;
+                    return data
                 }else{
                     alert('加载二维码错误');
                 }
@@ -201,28 +52,136 @@ class QRcodePanel extends React.Component{
             });
     }
 
+    // 获取配置
+    loadConfig(){
+        $.post('/api/qrcode/config')
+            .done((d)=>{
+                let {status,data} = JSON.parse(d);
+                if(status === "ok"){
+                    this.setState({list:data})
+                }else{
+                    alert('加载配置失败')
+                }
+            })
+            .fail(()=>{
+                alert('加载配置异常')
+            })
+    }
+
+    // 生成事件
+    onCreateCode(i){
+        let {list} = this.state;
+        list[i].timestamp = new Date().getTime();
+        let d = this.handleCreateCode(list[i]);
+        this.setState({list:d});
+    }
+
+    // 定时任务
+    onIntervalTask(i){
+        let {task} = this.state;
+        this.onCreateCode(i);
+        task[i] = setInterval(this.onCreateCode.bind(this,i),60000);
+        this.setState({start:true,task});
+    }
+
+    // 批量生成任务
+    onBatchTask(){
+        let {list} = this.state;
+        for(let i in list){
+            list[i].status = false;
+            setTimeout(this.onIntervalTask.bind(this,i),1000);
+        }
+        this.setState({list})
+    }
+
+    // 停止刷新
+    onStopTask(i){
+        let {task} = this.state;
+        clearInterval(task[i]);
+        this.setState({task,start:false})
+    }
+
+    // 设置弹窗
+    onShowConfig(cur_tab){
+        this.setState({cur_tab});
+        this.onCreateCodeList();
+    }
 
     render(){
-        const {qrcode,timestamp}=this.state;
-        if(this.props.start){
-            alert(111);
-        }
-        return <div className="col-sm-1">
+        const {list,start} = this.state;
+        let btnNode = !start ? <a className="btn btn-success btn-sm" href="javascript:void(0);" onClick={this.onBatchTask.bind(this)}>
+            <i className="fa fa-play"/> 开始
+        </a> : <a className="btn btn-danger btn-sm" href="javascript:void(0);" onClick={this.onStopTask.bind(this)}>
+            <i className="fa fa-stop"/> 结束
+        </a>;
+
+        // let startNodes = start ? "disabled":"";
+        let codeNodes = list.map((d,i) =>{
+            return <QRcodePanel key={i} data={d} onCreateCode={this.onCreateCode.bind(this)} index={i}/>
+        });
+        return <section className="wrapper">
+            <div className="row">
+                <div className="col-lg-12">
+                    <section className="panel row">
+                        <div className="panel-body">
+                            <span className="pull-right margin-right10" style={{marginBottom:"-5px"}}>
+                                {btnNode}
+                                {/*<a className={`btn btn-success btn-sm ${startNodes}`} href="javascript:void(0);" onClick={this.onStartTask.bind(this)}><i className="fa fa-play"/> 开始</a>*/}
+                                <a href="javascript:void(0);" className="btn btn-primary btn-sm" onClick={this.onShowConfig.bind(this)}><i className="fa fa-cog fa-lg"/></a>
+                            </span>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <div className="row">
+                <div className="col-lg-12 row">
+                {codeNodes}
+                </div>
+            </div>
+            {/*<ModalPanel list={list} onSetConfig={this.onSetConfig.bind(this)}/>*/}
+        </section>
+    }
+}
+
+class QRcodePanel extends React.Component{
+    constructor(props){
+        super(props);
+        this.state={
+            qrcode:"/img/fail.png",
+            data: this.props.data,
+            index:this.props.index,
+        };
+    }
+
+    onCreateCode(i){
+        this.props.onCreateCode(i);
+    }
+
+    render(){
+        const {qrcode,index,data:{product, price, img, timestamp, status}}=this.state;
+        let btnNode = status ? "" : "disabled";
+        return <div className="col-xs-4 col-sm-2 col-lg-1 code-box">
+            <div className="panel row">
+                <header className="panel-heading row">
+                    <span className="pull-left">{product}</span>
+                    <span className="pull-right text-danger"><strong>{price}</strong></span>
+                </header>
                 <div className="panel-body form-horizontal">
                     <div className="form-group text-center">
-                        <img src={qrcode} className="img-thumbnail"/>
+                        <img src={img ? img : qrcode} className="img-thumbnail"/>
                     </div>
                     <div className="form-group">
                         <label className="control-label">{timestamp}</label>
                         <div className="input-group input-group-sm">
                             <input className="form-control" type="text" disabled="true"/>
                             <div className="input-group-btn">
-                                <a className="btn btn-primary">刷新</a>
+                                <a className={`btn btn-primary ${btnNode}`} onClick={this.onCreateCode.bind(this,index)}>生成</a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
     }
 }
 
