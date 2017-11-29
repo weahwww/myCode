@@ -6,7 +6,7 @@ import sys
 import os
 import math
 import time
-import datetime
+from datetime import datetime
 import xml.etree.ElementTree as ET
 import tornado.ioloop
 import tornado.web
@@ -16,6 +16,7 @@ import json
 from PIL import Image, ImageDraw, ImageFont
 import glob
 import logging
+from bson.objectid import ObjectId
 logger = logging.getLogger("Pindd")
 
 # 指定logger输出格式
@@ -53,26 +54,26 @@ btn_map={'100':(40,500),'200':(137,500),'300':(250,500),'500':(335,500),'1000':(
 jykbtn_Map= {'1000' : (84,505), '2000': (245,500), '3000': (84,555), '4000': (245,555), '5000': (84,608), '6000': (245,606), '7000': (93,664), '8000': (249,663), '9000': (91,721), '10000': (252,717)}
 web_jykbtn_map = {'1000' : (73, 390),'2000': (211, 393),'3000':(345, 391),'4000':(69,438),'5000':(214,432),'6000':(350,432),'7000':(76,480),'8000':(218,478),'9000':(350,480),'10000':(75,524)}
 
-def get_order():
-    while True:
-        http_client = tornado.httpclient.HTTPClient()
-        body={'supId':'fenqile','receiver':'pindd','getNumber':1,'facevalue':None}
-        try:
-            response = http_client.fetch(url=order_url,method = 'POST',body=json.dumps(body),request_time_out=120)
-            res=json.loads(response.body.decode())
-            logger.info('猫拍获取订单'+res)
-            orderid = res.get('tradeNo')
-            price = res.get('faceValue')
-            mobile = res.get('phoneNo')
-            create_time = res.get('addTime')
-            product='fee_slow'
-            info_list = [mobile,price,create_time,'0',product]
-            conn.code.image.insert( {'name':Name_Map.get(product),'product':product,'mobile':str(mobile),'price':str(price),'create_time':create_time,'orderid':orderid,'time': datetime.datetime.now(),'status':'running'})
-            info_queuq1.put(info_list)
-        except tornado.httpclient.HTTPError as e:
-            logger.exception(e)
-        http_client.close()
-        time.sleep(10)
+# def get_order():
+#     while True:
+#         http_client = tornado.httpclient.HTTPClient()
+#         body={'supId':'fenqile','receiver':'pindd','getNumber':1,'facevalue':None}
+#         try:
+#             response = http_client.fetch(url=order_url,method = 'POST',body=json.dumps(body),request_time_out=120)
+#             res=json.loads(response.body.decode())
+#             logger.info('猫拍获取订单'+res)
+#             orderid = res.get('tradeNo')
+#             price = res.get('faceValue')
+#             mobile = res.get('phoneNo')
+#             create_time = res.get('addTime')
+#             product='fee_slow'
+#             info_list = [mobile,price,create_time,'0',product]
+#             conn.code.image.insert( {'product':product,'mobile':str(mobile),'price':str(price),'create_time':create_time,'orderid':orderid,'time': datetime.now(),'status':'running'})
+#             info_queuq1.put(info_list)
+#         except tornado.httpclient.HTTPError as e:
+#             logger.exception(e)
+#         http_client.close()
+#         time.sleep(10)
 
 def add_word(pattern,price,create_time):
     setFont = ImageFont.truetype('C:/windows/fonts/simhei.ttf', 30)
@@ -112,7 +113,7 @@ def get_login():
                 uri = 'https://mclient.alipay.com%s' % f1.readlines()[0].split(' ')[1].replace('"','')
                 f1.close()
                 if check(uri):
-                    conn.code.url.insert({'url': uri,'time': datetime.datetime.now(),'status':'wait'})
+                    conn.code.url.insert({'url': uri,'time': datetime.now(),'status':'wait'})
                     urllist.append(uri)
                 os.remove(path+'/'+each)#删除已解析的txt文件
 
@@ -155,11 +156,11 @@ def get_login():
                 if orderid!=[]:
                     orderid = orderid[0].get('orderid')
                 if not orderid:
-                    conn.code.image.update(fd,{'name':Name_Map.get(product),'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':filename,'status':'wait','time':datetime.datetime.now()})
+                    conn.code.image.update(fd,{'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':filename,'status':'wait','time':datetime.now()})
                 else:
-                    conn.code.image.update(fd, {'name':Name_Map.get(product),'product': product, 'price': str(price), 'mobile': str(mobile),
+                    conn.code.image.update(fd, {'product': product, 'price': str(price), 'mobile': str(mobile),
                                                 'create_time': str(create_time), 'num': num, 'image': filename,
-                                                'status': 'wait', 'orderid':orderid, 'time': datetime.datetime.now()})
+                                                'status': 'wait', 'orderid':orderid, 'time': datetime.now()})
                 logger.info(str(task)+'运行结果为:'+filename)
                 power_queue.put(1)#归还唯一操作权
 
@@ -468,7 +469,7 @@ def set_fail(info_list, adb_device):
     logger.info('set fail %s'% str(info_list))
     price, mobile, create_time, num, product = info_list
     os.popen('adb -s %s shell pm clear com.xunmeng.pinduoduo'% adb_device)
-    conn.code.image.update({'mobile':mobile,'price':price,'create_time':create_time},{'name':Name_Map.get(product),'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':'./code/fail.png','time':datetime.datetime.now(),'status':'fail'})
+    conn.code.image.update({'mobile':mobile,'price':price,'create_time':create_time},{'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':'./code/fail.png','time':datetime.now(),'status':'fail'})
     os.popen('adb -s %s shell input keyevent 4'% adb_device)
     os.popen('adb -s %s shell input keyevent 4'% adb_device)
 
@@ -480,7 +481,7 @@ def set_web_fail(info_list,adb_device):
     # os.popen('adb -s %s shell input tap 285 69' % adb_device)  # 点击网址框
     # time.sleep(1)
     # os.popen('adb -s %s shell input tap 366 68')  # 删除掉当前网址，不能清楚UC 不然要重新手机登陆
-    conn.code.image.update({'mobile':mobile,'price':price,'create_time':create_time},{'name':Name_Map.get(product),'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':'./code/fail.png','time':datetime.datetime.now(),'status':'fail'})
+    conn.code.image.update({'mobile':mobile,'price':price,'create_time':create_time},{'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':'./code/fail.png','time':datetime.now(),'status':'fail'})
     os.popen('adb -s %s shell input keyevent 4'% adb_device)
     os.popen('adb -s %s shell input keyevent 4'% adb_device)
 
@@ -528,57 +529,69 @@ class BatchHandle(tornado.web.RequestHandler):
     def get(self):
         self.redirect('batch.html')
 
+class TestHandle(tornado.web.RequestHandler):
+    def get(self):
+        self.redirect('test.html')
+
+# 二维码生成请求 /api/qrcode/submit
 class SubmitHandler(tornado.web.RequestHandler):
     def post(self):
         self.register()
-
     def register(self):
         try:
             body = json.loads(self.request.body.decode())
+            print(body)
             price = body.get('price')
-            mobile = body.get('phone')
+            account = body.get('account')
             create_time = str(body.get('timestamp'))
-            num = str(body.get('num'))
+            # num = str(body.get('num'))
             product = body.get('product')
+            order_id ="qr" + str(create_time) + str(ObjectId())
+            logging.info("当前ID %s" % order_id)
             if product == 'fee_slow':
-                if mobile!='' and len(mobile)==11:
-                    self.finish(json.dumps({'msg':'ok'}))
-                    info_list= [price,mobile,create_time,num,product]
+                if account!='' and len(account)==11:
+                    # info_list= [price,mobile,create_time,num,product]
+                    info_list= [price,account,create_time,product]
                     info_queuq1.put(info_list)
-                    conn.code.image.insert({'name':Name_Map.get(product),'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':'','status':'running','time':datetime.datetime.now()})
+                    # conn.code.image.insert({'product':product,'price': str(price),'account':str(account),'create_time':str(create_time),'num':num,'image':'','status':'running','time':datetime.now()})
+                    # order_id = str(ObjectId())
+                    conn.code.image.insert({'order_id':order_id,'product':product,'price': str(price),'account':str(account),'create_time':str(create_time),'image':'','order_status':'running','time':datetime.now(),'note':''})
+                    # data_id = conn.code.image.find({"order_id":order_id})
+                    # for id in data_id:
+                    #     logging.info("当前ID %s" % i
+                    self.finish(json.dumps({'status':'ok',"order_id":order_id}))
                 else:
-                    self.finish(json.dumps({"msg":"fail"}))
+                    self.finish(json.dumps({"status":"fail","order_id":""}))
             elif product =='jyk':
-                if mobile!='' and len(mobile)==19:
-                    self.finish(json.dumps({'msg':'ok'}))
-                    info_list= [price,mobile,create_time,num,product]
+                if account!='' and len(account)==19:
+                    info_list= [price,account,create_time,product]
                     info_queuq1.put(info_list)
-                    conn.code.image.insert({'name':Name_Map.get(product),'product':product,'price': str(price),'mobile':str(mobile),'create_time':str(create_time),'num':num,'image':'','status':'running','time':datetime.datetime.now()})
+                    conn.code.image.insert({'order_id':order_id,'product':product,'price': str(price),'account':str(account),'create_time':str(create_time),'image':'','order_status':'running','time':datetime.now(),'note':''})
+                    self.finish(json.dumps({'status': 'ok', "order_id": order_id}))
                 else:
-                    self.finish(json.dumps({"msg":"fail"}))
-            elif product == 'web_jyk':
-                if mobile != '' and len(mobile) == 19:
-                    self.finish(json.dumps({'msg': 'ok'}))
-                    info_list = [price, mobile, create_time, num, product]
+                    self.finish(json.dumps({"status":"fail","order_id":""}))
+            elif product == 'service_jyk':
+                if account!='' and len(account)==19:
+                    info_list= [price,account,create_time,product]
                     info_queuq2.put(info_list)
-                    conn.code.image.insert({'name': Name_Map.get(product), 'product': product, 'price': str(price), 'mobile': str(mobile),'create_time': str(create_time), 'num': num, 'image': '', 'status': 'running','time': datetime.datetime.now()})
+                    conn.code.image.insert({'order_id':order_id,'product':product,'price': str(price),'account':str(account),'create_time':str(create_time),'image':'','order_status':'running','time':datetime.now(),'note':''})
+                    self.finish(json.dumps({'status': 'ok', "order_id": order_id}))
                 else:
-                    self.finish(json.dumps({"msg": "fail"}))
+                    self.finish(json.dumps({"status":"fail","order_id":"","msg":"账号输入错误，请检查"}))
         except Exception as e:
             logger.exception(e)
 
+# 获取单个订单的二维码图片 /api/qrcode/qrcode_get
 class GetHandler(tornado.web.RequestHandler):
-
     def post(self):
-        self.send()
-
-    def send(self):
         try:
-            body = json.loads(self.request.body.decode())
-            price = body.get('price')
-            mobile = body.get('phone')
-            create_time = str(body.get('timestamp'))
-            filter_dict={'mobile':str(mobile),'price':str(price),'create_time':create_time}
+            body = json.loads(self.request.body.decode('utf-8'))
+            order_id = body.get('order_id')
+            # price = body.get('price')
+            # account = body.get('account')
+            # create_time = str(body.get('timestamp'))
+            # filter_dict={'order_id':order_id,'account':str(account),'price':str(price),'create_time':create_time}
+            filter_dict={'order_id': order_id}
             logger.info(str(filter_dict))
             fileinfo=list(conn.code.image.find(filter_dict))
             logger.info(fileinfo)
@@ -586,14 +599,14 @@ class GetHandler(tornado.web.RequestHandler):
                 filename=fileinfo[0]['image']
                 if filename!='':
                     logger.info(filename)
-                    self.finish(json.dumps({'msg':'get_result','data':filename}))
+                    self.finish(json.dumps({'status':'ok','data':filename}))#order_id
                     res=fileinfo[0]
-                    res['status'] = 'used'
+                    res['order_status'] = 'used'
                     conn.code.image.update(filter_dict, res)
                 else:
-                    self.finish(json.dumps({'msg': 'no_result', 'data': ''}))
+                    self.finish(json.dumps({'status': 'fail', 'data': ''}))
             else:
-                self.finish(json.dumps({'msg':'no_result','data':''}))
+                self.finish(json.dumps({'status':'fail','data':''}))
         except Exception as e:
             logger.exception(e)
 
@@ -659,8 +672,8 @@ class SummaryHandler(tornado.web.RequestHandler):
         size = req_body.get('size')
         start = req_body.get('start')
         end = req_body.get('end')
-        start_time = datetime.datetime.strptime(start, '%Y/%m/%d')
-        end_time = datetime.datetime.strptime(end, '%Y/%m/%d')+ datetime.timedelta(days=1)
+        start_time = datetime.strptime(start, '%Y/%m/%d')
+        end_time = datetime.strptime(end, '%Y/%m/%d')+ datetime.timedelta(days=1)
         filter_dict1 = {}
         filter_dict1.update({'time':{'$gte': start_time, '$lt': end_time},'status':status})
         filter_dict2 = {'time':{'$gte': start_time, '$lt': end_time}}
@@ -685,38 +698,64 @@ class SummaryHandler(tornado.web.RequestHandler):
             rbody = json.dumps({'msg': 'ok', 'max': str(int(pages)), 'data': reslist})
             #logger.info(rbody)
             self.finish(rbody)
+# 加载 / 修改配置 /api/qrcode/config
+class ConfigHandler(tornado.web.RequestHandler):
+    def post(self):
+        req_body = json.loads(self.request.body.decode('utf8'))
+        _type = req_body.get('type')
+        data = req_body.get('data')
+        try:
+            if _type == 'update':
+                for d in data:
+                    print(d)
+                    id = d['id']
+                    star = {"id": str(id)}
+                    a = {"id":str(d.get('id')),"product": str(d.get('product')), "price": str(d.get('price')), "account":str(d.get('account'))}
+                    print(a)
+                    conn.code.config.update(star,{'$set': a})
 
+            datlist = list(conn.code.config.find())
+            body_list = []
+            for d in datlist:
+                # data_list = list({'account': str(d.get(u'account')), 'price': str(d.get(u'price')), 'product': str(d.get(u'product')), 'id': str(d.get(u'id'))})
+                a = {"account":str(d.get('account')),"price":str(d.get('price')),"product":str(d.get('product')),"id":str(d.get("id"))}
+                body_list.append(a)
+            self.finish(json.dumps({"status": "ok", "data": body_list}))
+        except:
+            self.finish(json.dumps({"status": "fail", "data": ""}))
 if __name__ == '__main__':
-    device_list = []
-    try:
-        a=os.popen('adb devices').read().split('\n')
-        device_list =[each[0:each.index('\t')] for each in a[1:-2]]
-    except Exception as e:
-        logger.info(u'未获取到设备，重试中...')
-        a=os.popen('adb devices').read().split('\n')
-        device_list =[each[0:each.index('\t')] for each in a[1:-2]]
-    if device_list==[]:
-        logger.info(u'未获取到设备，请查看设备是否连接')
-        exit(0)
-    s= threading.Thread(target=get_order)#获取猫拍订单的线程
-    #s.start()
-    for each in device_list:
-       os.popen('adb -s %s shell pm clear com.xunmeng.pinduoduo'% each)#清除缓存
-    logger.info(u'已获取到%s台设备,%s'%(len(device_list),str(device_list)))
+    # device_list = []
+    # try:
+    #     a=os.popen('adb devices').read().split('\n')
+    #     device_list =[each[0:each.index('\t')] for each in a[1:-2]]
+    # except Exception as e:
+    #     logger.info(u'未获取到设备，重试中...')
+    #     a=os.popen('adb devices').read().split('\n')
+    #     device_list =[each[0:each.index('\t')] for each in a[1:-2]]
+    # if device_list==[]:
+    #     logger.info(u'未获取到设备，请查看设备是否连接')
+    #     exit(0)
+    # s= threading.Thread(target=get_order)#获取猫拍订单的线程
+    # #s.start()
+    # for each in device_list:
+    #    os.popen('adb -s %s shell pm clear com.xunmeng.pinduoduo'% each)#清除缓存
+    # logger.info(u'已获取到%s台设备,%s'%(len(device_list),str(device_list)))
     s0 = threading.Thread(target=main)#抓包
     thread_list=[]
     s0.start()
-    for each in device_list:
-        thread_list.append(threading.Thread(target=operate,args=(each,)))#下单
-    for each in thread_list:
-        each.start()
+    # for each in device_list:
+    #     thread_list.append(threading.Thread(target=operate,args=(each,)))#下单
+    # for each in thread_list:
+    #     each.start()
 
     Handlers = [
         (r"/", MainHandler),
         (r"/batch", BatchHandle),
-        (r"/api/qrcode/submit", SubmitHandler),#提单
-        (r"/api/qrcode_get",GetHandler),
-        (r"/api/qrcode/callback", CallbackHandler),#设置成功和失败
+        (r"/test",TestHandle),
+        (r"/api/qrcode/submit", SubmitHandler),                 # 提单
+        (r"/api/qrcode/qrcode_get",GetHandler),
+        (r"/api/qrcode/callback", CallbackHandler),             # 设置成功和失败
+        (r"/api/qrcode/config", ConfigHandler),                 # 加载/修改设置
         (r"/code/(.*png)", tornado.web.StaticFileHandler, {"path": "code"}),
         (r"/(.*html)", tornado.web.StaticFileHandler, {"path": "static/templates/hb_qrcode"}),
         (r"/((assets|css|js|img|fonts)/.*)", tornado.web.StaticFileHandler, {"path": "static"}),

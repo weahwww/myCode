@@ -36,12 +36,12 @@ table tr th {
   color: #eee;
 }
 .panel {
-  padding: 5px 15px;
+  padding: 5px 5px;
   border: 1px solid #d5d5d5;
   border-radius: 2px;
 }
 .panel-heading {
-  border-bottom: 1px solid #e5e5e5;
+  line-height: 0;
 }
 .wrapper {
   display: inline-block;
@@ -49,7 +49,7 @@ table tr th {
   width: 100%;
 }
 .code-box {
-  margin: auto 10px !important;
+  margin: auto 6px !important;
 }
 .padding0 {
   padding: 0px;

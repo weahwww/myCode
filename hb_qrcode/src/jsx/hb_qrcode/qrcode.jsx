@@ -19,7 +19,7 @@ class MainPanel extends React.Component{
             refresh:true,
             code_list:[],
             cur_tab:"all",
-            cur_data:{image:"",create_time:""},
+            cur_data:{image:"",order_id:""},
             show_type:{or_show:"false", title:"",code:""},
             page:1,
             max:0,
@@ -38,13 +38,13 @@ class MainPanel extends React.Component{
     }
 
     // 加载二维码列表
-    loadCodeList(page=1, status=this.state.cur_tab, start=this.state.r_start, end=this.state.r_end, size=40){
-        let r = {page,status,size,start,end};
+    loadCodeList(page=1, product=this.state.cur_tab, start=this.state.r_start, end=this.state.r_end, size=40){
+        let r = {page,product,size,start,end};
         console.log(r);
         $.post('/api/qrcode/summary',JSON.stringify(r))
             .done((d) => {
-                const {msg, data,max} = JSON.parse(d);
-                if(msg === 'ok'){
+                const {status, data, max} = JSON.parse(d);
+                if(status === 'ok'){
                     this.setState({
                         code_list:data,
                         page,
@@ -60,19 +60,19 @@ class MainPanel extends React.Component{
     }
 
     // 发送号码和价格
-    sendPhonePrice(phone,price,product) {
+    sendAccountPrice(account,price,product) {
         let timestamp = new Date().getTime();
         let r = {
             product,
-            phone,
+            account,
             price,
             timestamp
         };
         console.log(r);
         $.post("/api/qrcode/submit", JSON.stringify(r))
             .done((m)=>{
-                let {msg} = JSON.parse(m);
-                if (msg === "ok") {
+                let {status} = JSON.parse(m);
+                if (status === "ok") {
                     alert('发送成功,二维码加载会有延迟,大约1分钟左右,请耐心等待!');
                     this.loadCodeList();
                 }else{
@@ -86,8 +86,8 @@ class MainPanel extends React.Component{
     }
 
     // 设置回调结果
-    onSetCodeState(create_time, st){
-        $.post('/api/qrcode/callback', JSON.stringify({create_time, status:st}))
+    onSetCodeState(order_id, st){
+        $.post('/api/qrcode/callback', JSON.stringify({order_id, status:st}))
             .done((d)=>{
                 const {status} = JSON.parse(d);
                 if(status === 'ok'){
@@ -128,9 +128,9 @@ class MainPanel extends React.Component{
     // 取码弹窗
     onGetQRCode(i){
         let {code_list} = this.state;
-        let [{image,create_time}, show_type] = [code_list[i],{title:"取码",code:"getCode"}];
-        this.setState({cur_data:{image,create_time},show_type});
-        this.onSetCodeState(code_list[i].create_time,'used');
+        let [{image,order_id}, show_type] = [code_list[i],{title:"取码",code:"getCode"}];
+        this.setState({cur_data:{image,order_id},show_type});
+        this.onSetCodeState(code_list[i].order_id,'used');
         $('#modal').modal("show");
     }
 
@@ -147,14 +147,14 @@ class MainPanel extends React.Component{
     }
 
     render(){
-        function formatDate(now) {
-            let Y=now.getFullYear();
-            let M=now.getMonth()+1;
-            let D=now.getDate();
-            let h=now.getHours();
-            let m=now.getMinutes();
-            let s=now.getSeconds();
-            return Y+"-"+M+"-"+D+" "+h+":"+m+":"+s;
+        function formatDate(date) {
+            let Y=date.getFullYear() + '-';
+            let M=(date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+            let D=(date.getDate()< 10 ? '0' + (date.getDate()) : date.getDate()) + ' ';
+            let h=(date.getHours()< 10 ? '0' + date.getHours() : date.getHours()) + ':';
+            let m=(date.getMinutes() <10 ? '0' + date.getMinutes() : date.getMinutes()) + ':';
+            let s=(date.getSeconds() <10 ? '0' + date.getSeconds() : date.getSeconds());
+            return Y+M+D+h+m+s;
         }
 
         const {code_list, page, max,cur_tab,show_type,cur_data,refresh,format,start_date} = this.state;
@@ -178,8 +178,8 @@ class MainPanel extends React.Component{
             let c_time = new Date(parseInt(d.create_time));
             let [get_code_btn, finish_btn,fail_btn,noteNode] = [
                 <a href="javascript:void(0);" onClick={this.onGetQRCode.bind(this,i)}>取码</a>,
-                <a href="javascript:void(0);" onClick={this.onSetCodeState.bind(this,d.create_time,"finish")}>置成功</a>,
-                <a href="javascript:void(0);" onClick={this.onSetCodeState.bind(this,d.create_time,"fail")}>置失败</a>,
+                <a href="javascript:void(0);" onClick={this.onSetCodeState.bind(this,d.order_id,"finish")}>置成功</a>,
+                <a href="javascript:void(0);" onClick={this.onSetCodeState.bind(this,d.order_id,"fail")}>置失败</a>,
                 d.note
             ];
             if(d.status === 'running'){
@@ -188,13 +188,12 @@ class MainPanel extends React.Component{
                 [finish_btn,fail_btn] = [null,null]
             }
             return <tr key={i}>
-                <td>{d.create_time}</td>
-                <td>{d.name}</td>
+                <td>{d.order_id}</td>
+                <td>{d.product}</td>
                 <td>{formatDate(c_time)}</td>
                 <td>{d.price}</td>
-                <td>{d.mobile}</td>
-                <td>{d.orderid}</td>
-                <td className={style_map[d.status]}>{s_map[d.status]}</td>
+                <td>{d.account}</td>
+                <td className={style_map[d.order_status]}>{s_map[d.order_status]}</td>
                 <td>{get_code_btn}</td>
                 <td>{finish_btn} {fail_btn}</td>
                 <td>{noteNode}</td>
@@ -239,12 +238,11 @@ class MainPanel extends React.Component{
                             <table id="order_result" className="table table-striped table-hover">
                                 <thead>
                                 <tr>
-                                    <th>编号</th>
+                                    <th>订单编号</th>
                                     <th>产品名称</th>
                                     <th>提交时间</th>
                                     <th>面值</th>
                                     <th>号码</th>
-                                    <th>订单编号</th>
                                     <th>二维码状态</th>
                                     <th>取码</th>
                                     <th>订单操作</th>
@@ -259,7 +257,7 @@ class MainPanel extends React.Component{
                     </section>
 
                     <PageIndex className={"pull-right"} onPageIndex={this.loadCodeList.bind(this)} page={page} max={max} />
-                    <ModalPanel cur_data={cur_data} show_type={show_type} sendPhonePrice={this.sendPhonePrice.bind(this)}/>
+                    <ModalPanel cur_data={cur_data} show_type={show_type} sendAccountPrice={this.sendAccountPrice.bind(this)}/>
                 </div>
             </div>
         </section>
@@ -270,7 +268,7 @@ class ModalPanel extends React.Component{
     constructor(props){
         super(props);
         this.state = {
-            used_mobile:[
+            used_account:[
                 {id:'18351889239',name:'18351889239'},
                 {id:'18351889240',name:'18351889240'},
                 {id:'17721566606',name:'17721566606'},
@@ -318,14 +316,14 @@ class ModalPanel extends React.Component{
             product_active:"web_jyk",
             price_active:"1000",
             def_img:"/img/fail.png",
-            mobile:"",
+            account:"",
         }
     }
 
     // 选择产品
     onSelectProduct(product_active){
         let price_active = product_active==="fee_slow"?"100":"1000";
-        this.setState({product_active,price_active,mobile:""})
+        this.setState({product_active,price_active,account:""})
     }
 
     // 选择价格
@@ -334,17 +332,17 @@ class ModalPanel extends React.Component{
     }
 
     // 发送号码和价格生成二维码
-    sendPhonePrice(){
-        const {mobile, product_active,price_active} = this.state;
-        let [phone, product, price] = [mobile, product_active,price_active];
-        console.log(phone,", ",price,", ",product);
-        if(phone === ''){
+    sendAccountPrice(){
+        const {account, product_active,price_active} = this.state;
+        let [product, price] =[product_active,price_active];
+        console.log(account,", ",price,", ",product);
+        if(account === ''){
             alert('号码格式错误,请重新输入!');
             return false;
         }
 
         if(window.confirm("确认生成二维码吗?")){
-            this.props.sendPhonePrice(phone,price,product);
+            this.props.sendAccountPrice(account,price,product);
             $("#modal").modal('hide');
         }else{
             return false
@@ -353,34 +351,34 @@ class ModalPanel extends React.Component{
 
     // 关闭
     onCancel(){
-        this.setState({mobile:null,product_active:"web_jyk", price_active:"1000",});
+        this.setState({account:null,product_active:"web_jyk", price_active:"1000",});
         $('#modal').modal("hide");
     }
 
-    // 手机号码输入
-    onMobileChange(e){
+    // 号码输入
+    onAccountChange(e){
         console.log(e.target.value);
-        this.setState({mobile: e.target.value})
+        this.setState({account: e.target.value})
     }
 
-    onSelectUsedMobile(mobile){
-        this.setState({mobile})
+    onSelectUsedAccount(account){
+        this.setState({account})
     }
 
     // 随机输入手机号
-    getRandomPhone() {
+    getRandomAccount() {
         let numArray = ["139", "138", "137", "136", "135", "134", "159", "158", "157", "150", "151", "152", "188", "187", "182", "183", "184", "178", "130", "131", "132", "156", "155", "186", "185", "176", "133", "153", "189", "180", "181", "177"];
         let i = parseInt(10 * Math.random());
-        let mobile = numArray[i];
+        let account = numArray[i];
         for (let j = 0; j < 8; j++) {
-            mobile = mobile + Math.floor(Math.random() * 10);
+            account = account + Math.floor(Math.random() * 10);
         }
-        this.setState({mobile})
+        this.setState({account})
     }
 
     render() {
         const {cur_data:{image,create_time}, show_type: {title, code}} = this.props;
-        const {used_mobile, product, price, mobile, product_active, price_active,def_img} = this.state;
+        const {used_account, product, price, account, product_active, price_active,def_img} = this.state;
         let [showNodes, okBtn] = [<div className="text-center"><img src={image ? image : def_img} className="img-thumbnail"/><h5>{create_time}</h5></div>, "",];
 
         let productBtn = product.map((d, i) => {
@@ -395,11 +393,11 @@ class ModalPanel extends React.Component{
                         onClick={this.onSelectPrice.bind(this, d.id)}>{d.name}</a></div>
         });
 
-        let inputNode = <input type="text" className="form-control" value={mobile} defaultValue={mobile}
-                        placeholder="输入充值的帐号" onChange={this.onMobileChange.bind(this)}/>;
+        let inputNode = <input type="text" className="form-control" value={account} defaultValue={account}
+                        placeholder="输入充值的帐号" onChange={this.onAccountChange.bind(this)}/>;
         if(product_active === 'fee_slow'){
-            let usedMobileBtn = used_mobile.map((d,i)=>{
-                return <li key={i}><a href="javascript:void(0);" onClick={this.onSelectUsedMobile.bind(this,d.id)}>{d.name}</a></li>
+            let usedAccountBtn = used_account.map((d,i)=>{
+                return <li key={i}><a href="javascript:void(0);" onClick={this.onSelectUsedAccount.bind(this,d.id)}>{d.name}</a></li>
             });
 
             inputNode = <div className="input-group">
@@ -408,13 +406,13 @@ class ModalPanel extends React.Component{
                         <i className="fa fa-caret-down"/>
                     </a>
                     <ul className="dropdown-menu dropdown-menu-right">
-                        {usedMobileBtn}
+                        {usedAccountBtn}
                     </ul>
                 </div>
-                <input type="text" className="form-control" value={mobile} defaultValue={mobile} placeholder="输入充值的帐号"
-                       onChange={this.onMobileChange.bind(this)}/>
+                <input type="text" className="form-control" value={account} defaultValue={account} placeholder="输入充值的帐号"
+                       onChange={this.onAccountChange.bind(this)}/>
                 <div className="input-group-btn">
-                    <button className="btn btn-default" type="button" onClick={this.getRandomPhone.bind(this)}>随机</button>
+                    <button className="btn btn-default" type="button" onClick={this.getRandomAccount.bind(this)}>随机</button>
                 </div>
             </div>;
         }
@@ -437,7 +435,7 @@ class ModalPanel extends React.Component{
                 </div>
 
             </div>;
-            okBtn = <a className="btn btn-primary" onClick={this.sendPhonePrice.bind(this)}>生成</a>;
+            okBtn = <a className="btn btn-primary" onClick={this.sendAccountPrice.bind(this)}>生成</a>;
         }
 
         return <div className='modal fade' id='modal' tabIndex='-1' role='dialog' aria-labelledby='addModalLabel' data-backdrop="static">

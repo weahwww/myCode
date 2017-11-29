@@ -1,123 +1,188 @@
 /* weahwww create */
-import React from 'react';
+import React,{Component} from 'react';
 import ReactDOM from 'react-dom';
+const [Product, Price, pd_map] = [[
+    {id:"fee_slow",name:"全国话费慢充"},
+    {id:"jyk",name:"加油卡"},
+    {id:"service_jyk",name:"客服加油卡"},
+], {
+    fee_slow:[
+        {id:"100",name:"100"},
+        {id:"200",name:"200"},
+        {id:"300",name:"300"},
+        {id:"500",name:"500"},
+        {id:"1000",name:"1000"},
+        {id:"2000",name:"2000"},
+        {id:"3000",name:"3000"},
+        {id:"4000",name:"4000"},
+        {id:"5000",name:"5000"},
+        {id:"10000",name:"10000"}
+    ],
+    jyk:[
+        {id:"1000",name:"1000"},
+        {id:"2000",name:"2000"},
+        {id:"3000",name:"3000"},
+        {id:"4000",name:"4000"},
+        {id:"5000",name:"5000"},
+        {id:"6000",name:"6000"},
+        {id:"7000",name:"7000"},
+        {id:"8000",name:"8000"},
+        {id:"9000",name:"9000"},
+        {id:"10000",name:"10000"},
+    ],
+    service_jyk:[
+        {id:"500",name:"500"},
+        {id:"1000",name:"1000"},
+        {id:"3000",name:"3000"},
+        {id:"5000",name:"5000"},
+        {id:"10000",name:"10000"},
+        {id:"20000",name:"20000"},
+    ]},{
+    fee_slow:"全国话费慢充",
+    jyk:"加油卡",
+    service_jyk:"客服加油卡"
+}];
 
-class MainPanel extends React.Component{
+
+class MainPanel extends Component{
     constructor() {
         super();
         this.state ={
             start:false,
-            task:[],
-            list:[
-                {id:"1",product:"jyk",price:"100",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                {id:"2",product:"phone",price:"1000",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"3",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"4",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"5",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"6",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"7",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"8",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"9",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"10",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"11",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"12",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"13",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"14",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"15",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"16",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"17",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"18",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"19",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                // {id:"20",product:"",price:"",phone:"",interval:"600000",img:"",timestamp:"",status:false},
-                ],
+            list:[],
         };
+        this.handleConfig("all");
     }
 
     // 发送生成二维码请求
-    handleCreateCode(data){
-        $.post('/api/qrcode/submit',JSON.stringify(data))
+    handleSubmitData(i){
+        let {list} = this.state;
+        list[i].timestamp = new Date().getTime();
+        $.post('/api/qrcode/submit',JSON.stringify(list[i]))
             .done((d) => {
-                const {msg, img} = JSON.parse(d);
-                if(msg === 'ok'){
+                console.log(d);
+                let {status, order_id} = JSON.parse(d);
+                if(status === 'ok'){
                     // list[i].img = img;
-                    data.status = true;
-                    data.img = img;
-                    return data
+                    list[i].order_id = order_id;
+                    list[i].status = true;
+                    clearTimeout(list[i].img_task);
+                    list[i].img_task = null;
+                    this.loadCodeImage(i,order_id);
+                    this.setState({list})
                 }else{
-                    alert('加载二维码错误');
+                    alert('创建订单失败');
                 }
             })
             .fail(() => {
-                alert('加载二维码异常');
+                alert('创建订单异常');
             });
     }
 
-    // 获取配置
-    loadConfig(){
-        $.post('/api/qrcode/config')
+    // 加载 / 修改配置
+    handleConfig(type,data=this.state.list){
+        $.post('/api/qrcode/config',JSON.stringify({type,data}))
             .done((d)=>{
                 let {status,data} = JSON.parse(d);
                 if(status === "ok"){
-                    this.setState({list:data})
+                    this.setState({list:data});
                 }else{
-                    alert('加载配置失败')
+                    alert('加载配置失败');
+                    return false
                 }
             })
             .fail(()=>{
-                alert('加载配置异常')
+                alert('加载配置异常');
+                return false
             })
     }
 
-    // 生成事件
-    onCreateCode(i){
+    // 获取图片
+    loadCodeImage(i,order_id){
         let {list} = this.state;
-        list[i].timestamp = new Date().getTime();
-        let d = this.handleCreateCode(list[i]);
-        this.setState({list:d});
+        let img_task = null;
+        $.post('/api/qrcode/qrcode_get',JSON.stringify({order_id}))
+            .done((d)=>{
+                let {status,image} = JSON.parse(d);
+                if(status === "ok"){
+                    list[i].image = image;
+                    list[i].status = false;
+                    this.setState({list});
+                    return false
+                }else{
+                    img_task = setTimeout(this.loadCodeImage.bind(this,i,order_id), 30000);
+                    list[i].img_task = img_task;
+                    this.setState({list});
+                }
+            })
+            .fail(()=>{
+                alert('获取图片异常');
+                return false
+            })
     }
 
-    // 定时任务
-    onIntervalTask(i){
-        let {task} = this.state;
-        this.onCreateCode(i);
-        task[i] = setInterval(this.onCreateCode.bind(this,i),60000);
-        this.setState({start:true,task});
-    }
-
-    // 批量生成任务
-    onBatchTask(){
-        let {list} = this.state;
-        for(let i in list){
-            list[i].status = false;
-            setTimeout(this.onIntervalTask.bind(this,i),1000);
-        }
+    // 停止任务
+    onClearInterval(i){
+        let {list} =this.state;
+        clearInterval(list[i].task);
+        clearTimeout(list[i].img_task);
+        list[i].task = null;
+        list[i].img_task = null;
+        list[i].status = false;
+        console.log("CleanInterval: ",list);
         this.setState({list})
     }
 
-    // 停止刷新
-    onStopTask(i){
-        let {task} = this.state;
-        clearInterval(task[i]);
-        this.setState({task,start:false})
+    // 开始任务
+    onIntervalTask(i){
+        let {list} = this.state;
+        this.handleSubmitData(i);
+        list[i].task = setInterval(this.handleSubmitData.bind(this,i),100000);
+        console.log("Interval: ", list);
+        this.setState({start:true,list});
     }
 
-    // 设置弹窗
-    onShowConfig(cur_tab){
-        this.setState({cur_tab});
-        this.onCreateCodeList();
+    // 开始批量任务
+    onStartBatchTask(){
+        let {list} = this.state;
+        for(let i in list){
+            list[i].status = true;
+            setTimeout(this.onIntervalTask.bind(this,i),5000);
+        }
+        console.log("StartBatch: ", list);
+        this.setState({list})
+    }
+
+    // 停止批量任务
+    onStopBatchTask(){
+        let {list} = this.state;
+        for(let i in list){
+            clearInterval(list[i].task);
+            clearTimeout(list[i].img_task);
+            list[i].status = false;
+            list[i].task = null;
+            list[i].img_task = null;
+        }
+        console.log("StopBatch: ",list);
+        this.setState({start:false,list})
     }
 
     render(){
+        // 设置弹窗
+        let onShowConfig = ()=>{
+            $("#modal").modal("show");
+        };
+
         const {list,start} = this.state;
-        let btnNode = !start ? <a className="btn btn-success btn-sm" href="javascript:void(0);" onClick={this.onBatchTask.bind(this)}>
+        let btnNode = !start ? <a className="btn btn-success btn-sm" href="javascript:void(0);" onClick={this.onStartBatchTask.bind(this)}>
             <i className="fa fa-play"/> 开始
-        </a> : <a className="btn btn-danger btn-sm" href="javascript:void(0);" onClick={this.onStopTask.bind(this)}>
+        </a> : <a className="btn btn-danger btn-sm" href="javascript:void(0);" onClick={this.onStopBatchTask.bind(this)}>
             <i className="fa fa-stop"/> 结束
         </a>;
 
         // let startNodes = start ? "disabled":"";
         let codeNodes = list.map((d,i) =>{
-            return <QRcodePanel key={i} data={d} onCreateCode={this.onCreateCode.bind(this)} index={i}/>
+            return <QRcodePanel key={i} data={d} onIntervalTask={this.onIntervalTask.bind(this)} index={i}/>
         });
         return <section className="wrapper">
             <div className="row">
@@ -126,24 +191,22 @@ class MainPanel extends React.Component{
                         <div className="panel-body">
                             <span className="pull-right margin-right10" style={{marginBottom:"-5px"}}>
                                 {btnNode}
-                                {/*<a className={`btn btn-success btn-sm ${startNodes}`} href="javascript:void(0);" onClick={this.onStartTask.bind(this)}><i className="fa fa-play"/> 开始</a>*/}
-                                <a href="javascript:void(0);" className="btn btn-primary btn-sm" onClick={this.onShowConfig.bind(this)}><i className="fa fa-cog fa-lg"/></a>
+                                <a href="javascript:void(0);" className="btn btn-primary btn-sm" onClick={onShowConfig.bind(this)}><i className="fa fa-cog fa-lg"/></a>
                             </span>
                         </div>
                     </section>
                 </div>
             </div>
             <div className="row">
-                <div className="col-lg-12 row">
                 {codeNodes}
-                </div>
             </div>
-            {/*<ModalPanel list={list} onSetConfig={this.onSetConfig.bind(this)}/>*/}
+            <ModalPanel list={list} onClearInterval={this.onClearInterval.bind(this)} onIntervalTask={this.onIntervalTask.bind(this)}
+                        onStartBatchTask={this.onStartBatchTask.bind(this)} onStopBatchTask={this.onStopBatchTask.bind(this)} handleConfig={this.handleConfig.bind(this)}/>
         </section>
     }
 }
 
-class QRcodePanel extends React.Component{
+class QRcodePanel extends Component{
     constructor(props){
         super(props);
         this.state={
@@ -153,31 +216,103 @@ class QRcodePanel extends React.Component{
         };
     }
 
-    onCreateCode(i){
-        this.props.onCreateCode(i);
+    onIntervalTask(i){
+        this.props.onIntervalTask(i);
     }
 
     render(){
-        const {qrcode,index,data:{product, price, img, timestamp, status}}=this.state;
-        let btnNode = status ? "" : "disabled";
+        function formatDate(date) {
+            let Y=date.getFullYear() + '-';
+            let M=(date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+            let D=(date.getDate()< 10 ? '0' + (date.getDate()) : date.getDate()) + ' ';
+            let h=(date.getHours()< 10 ? '0' + date.getHours() : date.getHours()) + ':';
+            let m=(date.getMinutes() <10 ? '0' + date.getMinutes() : date.getMinutes()) + ':';
+            let s=(date.getSeconds() <10 ? '0' + date.getSeconds() : date.getSeconds());
+            return Y+M+D+h+m+s;
+        }
+
+        const {qrcode,index,data:{product, price, image, timestamp, status}}=this.state;
+        let ts = new Date(parseInt(timestamp));
+        let btnNode = !status ? "" : "disabled";
         return <div className="col-xs-4 col-sm-2 col-lg-1 code-box">
-            <div className="panel row">
+            <section className="panel row">
                 <header className="panel-heading row">
-                    <span className="pull-left">{product}</span>
+                    <span className="pull-left">{pd_map[product]}</span>
                     <span className="pull-right text-danger"><strong>{price}</strong></span>
                 </header>
                 <div className="panel-body form-horizontal">
                     <div className="form-group text-center">
-                        <img src={img ? img : qrcode} className="img-thumbnail"/>
+                        <img src={image ? image : qrcode} className="img-thumbnail"/>
                     </div>
                     <div className="form-group">
-                        <label className="control-label">{timestamp}</label>
+                        <h6><small>{timestamp ? formatDate(ts) : "未开始"}</small></h6>
                         <div className="input-group input-group-sm">
                             <input className="form-control" type="text" disabled="true"/>
                             <div className="input-group-btn">
-                                <a className={`btn btn-primary ${btnNode}`} onClick={this.onCreateCode.bind(this,index)}>生成</a>
+                                <a className={`btn btn-primary ${btnNode}`} onClick={this.onIntervalTask.bind(this,index)}>生成</a>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    }
+}
+
+class ModalPanel extends Component{
+    constructor(props){
+        super(props);
+        this.state = {
+            data:[]
+        }
+    }
+
+    // 全部保存
+    onSaveAllConfig() {
+        let {data} = this.state;
+        if(data !== [] || data.length !== 0){
+            this.props.handleConfig("update",data);
+            this.props.onStopBatchTask();
+            this.props.onStartBatchTask()
+        }
+    }
+
+    // state更新
+    handleState(type,i,val) {
+        let data = this.props.list;
+        data[i][type] = val;
+        this.setState({data});
+    }
+
+    // 关闭
+    onCancel(){
+        this.props.handleConfig("all");
+        $('#modal').modal("hide");
+    }
+
+    render() {
+        const {list} = this.props;
+        let inputNode = list.map((d,i)=>{
+            return <ConfigInput key={i} index={i} data={d} handleConfig={this.props.handleConfig.bind(this)}
+                                onClearInterval={this.props.onClearInterval.bind(this)} onIntervalTask={this.props.onIntervalTask.bind(this)}
+                                handleState={this.handleState.bind(this)}/>
+        });
+        return <div className='modal fade' id='modal' tabIndex='-1' role='dialog' aria-labelledby='addModalLabel' data-backdrop="static">
+            <div className='modal-dialog'>
+                <div className='modal-content'>
+                    <div className='modal-header'>
+                        <h4 className='pull-left'>设置</h4>
+                        <span className="pull-right">
+                            <a href="javascript:void(0);" className="btn btn-primary btn-sm" onClick={this.onSaveAllConfig.bind(this)}>全部保存</a>
+                        </span>
+                    </div>
+
+                    <div className='modal-body row'>
+                        {inputNode}
+                    </div>
+
+                    <div className='modal-footer'>
+                        <a className='btn btn-default' data-dismiss='modal' onClick={this.onCancel.bind(this)}>关闭</a>
                     </div>
                 </div>
             </div>
@@ -185,192 +320,81 @@ class QRcodePanel extends React.Component{
     }
 }
 
-// class ModalPanel extends React.Component{
-//     constructor(props){
-//         super(props);
-//         this.state = {
-//             product:[
-//                 {id:"fee_slow",name:"全国话费慢充"},
-//                 {id:"jyk",name:"加油卡"},
-//                 {id:"service_jyk",name:"客服加油卡"},
-//             ],
-//             price:{
-//                 fee_slow:[
-//                     {id:"100",name:"100"},
-//                     {id:"200",name:"200"},
-//                     {id:"300",name:"300"},
-//                     {id:"500",name:"500"},
-//                     {id:"1000",name:"1000"},
-//                     {id:"2000",name:"2000"},
-//                     {id:"3000",name:"3000"},
-//                     {id:"4000",name:"4000"},
-//                     {id:"5000",name:"5000"},
-//                     {id:"10000",name:"10000"}
-//                 ],
-//                 jyk:[
-//                     {id:"1000",name:"1000"},
-//                     {id:"2000",name:"2000"},
-//                     {id:"3000",name:"3000"},
-//                     {id:"4000",name:"4000"},
-//                     {id:"5000",name:"5000"},
-//                     {id:"6000",name:"6000"},
-//                     {id:"7000",name:"7000"},
-//                     {id:"8000",name:"8000"},
-//                     {id:"9000",name:"9000"},
-//                     {id:"10000",name:"10000"},
-//                 ],
-//                 service_jyk:[
-//                     {id:"500",name:"500"},
-//                     {id:"1000",name:"1000"},
-//                     {id:"3000",name:"3000"},
-//                     {id:"5000",name:"5000"},
-//                     {id:"10000",name:"10000"},
-//                     {id:"20000",name:"20000"},
-//                 ]
-//             },
-//             cur_product:"service_jyk",
-//             cur_price:"500",
-//         }
-//     }
-//
-//     // 选择产品
-//     onSelectProduct(){
-//         let cur_price = product_active==="fee_slow"?"100":"1000";
-//         this.setState({product_active,price_active,mobile:""})
-//     }
-//
-//     // 选择价格
-//     onSelectPrice(cur_price){
-//         this.setState({cur_price})
-//     }
-//
-//     // 发送号码和价格生成二维码
-//     sendPhonePrice(){
-//         const {mobile, product_active,price_active} = this.state;
-//         let [phone, product, price] = [mobile, product_active,price_active];
-//         console.log(phone,", ",price,", ",product);
-//         if(phone === ''){
-//             alert('号码格式错误,请重新输入!');
-//             return false;
-//         }
-//
-//         if(window.confirm("确认生成二维码吗?")){
-//             this.props.sendPhonePrice(phone,price,product);
-//             $("#modal").modal('hide');
-//         }else{
-//             return false
-//         }
-//     }
-//
-//     // 关闭
-//     onCancel(){
-//         this.setState({mobile:null,product_active:"fee_slow", price_active:"100",});
-//         $('#modal').modal("hide");
-//     }
-//
-//     // 手机号码输入
-//     onMobileChange(e){
-//         console.log(e.target.value);
-//         this.setState({mobile: e.target.value})
-//     }
-//
-//     onSelectUsedMobile(mobile){
-//         this.setState({mobile})
-//     }
-//
-//     // 随机输入手机号
-//     getRandomPhone() {
-//         let numArray = ["139", "138", "137", "136", "135", "134", "159", "158", "157", "150", "151", "152", "188", "187", "182", "183", "184", "178", "130", "131", "132", "156", "155", "186", "185", "176", "133", "153", "189", "180", "181", "177"];
-//         let i = parseInt(10 * Math.random());
-//         let mobile = numArray[i];
-//         for (let j = 0; j < 8; j++) {
-//             mobile = mobile + Math.floor(Math.random() * 10);
-//         }
-//         this.setState({mobile})
-//     }
-//
-//     render() {
-//         const {cur_data:{image,create_time}, show_type: {title, code}} = this.props;
-//         const {used_mobile, product, price, mobile, product_active, price_active,def_img} = this.state;
-//         let [showNodes, okBtn] = [<div className="text-center"><img src={image ? image : def_img} className="img-thumbnail"/><h5>{create_time}</h5></div>, "",];
-//
-//         let productBtn = product.map((d, i) => {
-//             let btn_style = product_active === d.id ? "btn-primary" : "btn-default";
-//             return <div className="col-sm-4 margin-bottom15"><a key={i} href="javascript:void(0);" className={`btn btn-block ${btn_style}`}
-//                                                                 onClick={this.onSelectProduct.bind(this, d.id)}>{d.name}</a></div>
-//         });
-//
-//         let priceBtn = price[product_active].map((d, i) => {
-//             let btn_style = price_active === d.id ? "btn-primary" : "btn-default";
-//             return <div className="col-sm-3 margin-bottom15"><a key={i} href="javascript:void(0);" className={`btn btn-block ${btn_style}`}
-//                         onClick={this.onSelectPrice.bind(this, d.id)}>{d.name}</a></div>
-//         });
-//
-//         let inputNode = <input type="text" className="form-control" value={mobile} defaultValue={mobile}
-//                         placeholder="输入充值的帐号" onChange={this.onMobileChange.bind(this)}/>;
-//         if(product_active === 'fee_slow'){
-//             let usedMobileBtn = used_mobile.map((d,i)=>{
-//                 return <li key={i}><a href="javascript:void(0);" onClick={this.onSelectUsedMobile.bind(this,d.id)}>{d.name}</a></li>
-//             });
-//
-//             inputNode = <div className="input-group">
-//                 <div className="input-group-btn">
-//                     <a type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-//                         <i className="fa fa-caret-down"/>
-//                     </a>
-//                     <ul className="dropdown-menu dropdown-menu-right">
-//                         {usedMobileBtn}
-//                     </ul>
-//                 </div>
-//                 <input type="text" className="form-control" value={mobile} defaultValue={mobile} placeholder="输入充值的帐号"
-//                        onChange={this.onMobileChange.bind(this)}/>
-//                 <div className="input-group-btn">
-//                     <button className="btn btn-default" type="button" onClick={this.getRandomPhone.bind(this)}>随机</button>
-//                 </div>
-//             </div>;
-//         }
-//
-//         if (code === "createNew") {
-//             showNodes = <div className='form-group'>
-//                 <label className="col-sm-4 col-md-2 control-label">产品</label>
-//                 <div className="col-sm-8 col-md-10 row">
-//                     {productBtn}
-//                 </div>
-//
-//                 <label className="col-sm-4 col-md-2 control-label">充值帐号</label>
-//                 <div className="col-sm-8 col-md-10 margin-bottom15">
-//                     {inputNode}
-//                 </div>
-//
-//                 <label className="col-sm-4 col-md-2 control-label">面值</label>
-//                 <div className="col-sm-8 col-md-10 row">
-//                     {priceBtn}
-//                 </div>
-//
-//             </div>;
-//             okBtn = <a className="btn btn-primary" onClick={this.sendPhonePrice.bind(this)}>生成</a>;
-//         }
-//
-//         return <div className='modal fade' id='modal' tabIndex='-1' role='dialog' aria-labelledby='addModalLabel' data-backdrop="static">
-//             <div className='modal-dialog'>
-//                 <div className='modal-content'>
-//                     <div className='modal-header'>
-//                         <h4 className='modal-title'>{title}</h4>
-//                     </div>
-//
-//                     <div className='modal-body form-horizontal'>
-//                         {showNodes}
-//                     </div>
-//
-//                     <div className='modal-footer'>
-//                         {okBtn}
-//                         <a className='btn btn-default' data-dismiss='modal' onClick={this.onCancel.bind(this)}>关闭</a>
-//                     </div>
-//                 </div>
-//             </div>
-//         </div>
-//     }
-// }
+class ConfigInput extends Component{
+    constructor(props){
+        super(props);
+        this.state={
+            data: this.props.data,
+            index:this.props.index
+        }
+    }
+
+    componentWillReceiveProps(nextProps) {
+         this.setState({
+             data: nextProps.data,
+             index: nextProps.index
+         });
+    }
+
+    // 修改值
+    onChangeValue(type,id){
+        const {index} = this.state;
+        this.setState({[type]:id});
+        this.props.handleState(type,index,id)
+    }
+
+    // 修改帐号
+    onChangeAccount(e){
+        const {index} = this.state;
+        let account = e.target.value;
+        this.props.handleState("account",index,account)
+    }
+
+    // 保存修改
+    onSaveConfig(){
+        const {index,data} = this.state;
+        let d = [];
+        d[0] = data;
+        this.props.handleConfig("update", d);
+        this.props.onClearInterval(index);
+        this.props.onIntervalTask(index);
+    }
+
+    render(){
+        const {id,product,price,account} = this.state.data;
+        let productNode = Product.map((d,i)=>{
+            return <li key={i}><a href="javascript:void(0);" onClick={this.onChangeValue.bind(this,"product",d.id)}>{d.name}</a></li>
+        });
+        let priceNode = Price[product].map((d,i)=>{
+            return <li key={i}><a href="javascript:void(0);" onClick={this.onChangeValue.bind(this,"price",d.id)}>{d.name}</a></li>
+        });
+        return <div className="col-sm-12 row margin-bottom5">
+            <div className="col-sm-1"><h5>{id}</h5></div>
+            <div className="col-sm-11 input-group input-group-sm">
+                <div className="input-group-btn">
+                    <button type="button" className="btn btn-default dropdown-toggle col-sm-12" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {pd_map[product]}
+                    </button>
+                    <ul className="dropdown-menu">
+                        {productNode}
+                    </ul>
+                </div>
+                <div className="input-group-btn">
+                    <button type="button" className="btn btn-default dropdown-toggle col-sm-12" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {price}
+                    </button>
+                    <ul className="dropdown-menu">
+                        {priceNode}
+                    </ul>
+                </div>
+                <input type="text" className="form-control input-sm" defaultValue={account} onChange={this.onChangeAccount.bind(this)}/>
+                <div className="input-group-btn">
+                    <button type="button" className="btn btn-default" onClick={this.onSaveConfig.bind(this)}>保存</button>
+                </div>
+            </div>
+        </div>
+    }
+}
 
 ReactDOM.render(
     <MainPanel /> ,
