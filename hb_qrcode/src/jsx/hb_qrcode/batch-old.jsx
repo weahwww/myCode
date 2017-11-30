@@ -2,7 +2,7 @@
 import React,{Component} from 'react';
 import ReactDOM from 'react-dom';
 const [Product, Price, pd_map] = [[
-    {id:"fee_slow",name:"话费慢充"},
+    {id:"fee_slow",name:"全国话费慢充"},
     {id:"jyk",name:"加油卡"},
     {id:"service_jyk",name:"客服加油卡"},
 ], {
@@ -38,16 +38,16 @@ const [Product, Price, pd_map] = [[
         {id:"10000",name:"10000"},
         {id:"20000",name:"20000"},
     ]},{
-    fee_slow:"话费慢充",
+    fee_slow:"全国话费慢充",
     jyk:"加油卡",
     service_jyk:"客服加油卡"
 }];
+
 
 class MainPanel extends Component{
     constructor() {
         super();
         this.state ={
-            s_view:false,
             start:false,
             list:[],
             o_list:[],
@@ -174,54 +174,41 @@ class MainPanel extends Component{
         this.setState({start:false,list})
     }
 
-    // 全部保存
-    onSaveAllConfig() {
-        let {list} = this.state;
-        if(list !== [] || list.length !== 0){
-            this.handleConfig("update",list);
-            this.onStopBatchTask();
-            this.onStartBatchTask()
-        }
-    }
-
-    // state更新
-    handleState(type,i,val) {
-        let {list} = this.state;
-        console.log("i: ",i,"; con: ",list);
-        list[i][type] = val;
-        this.setState({list});
-    }
-
-
     render(){
         // 设置弹窗
-        // let onShowConfig =()=>{
-        //     $("#modal").modal("show");
-        // };
+        let onShowConfig =()=>{
+            $("#modal").modal("show");
+        };
 
-        const {list,o_list,start,s_view} = this.state;
-        let viewNode = s_view ? "col-lg-11" : "col-lg-9";
-
-
+        const {list,o_list,start} = this.state;
+        let btnNode = !start ? <a className="btn btn-success btn-sm" href="javascript:void(0);" onClick={this.onStartBatchTask.bind(this)}>
+            <i className="fa fa-play"/> 开始
+        </a> : <a className="btn btn-danger btn-sm" href="javascript:void(0);" onClick={this.onStopBatchTask.bind(this)}>
+            <i className="fa fa-stop"/> 结束
+        </a>;
 
         // let startNodes = start ? "disabled":"";
         let codeNodes = list.map((d,i) =>{
             return <QRcodePanel key={i} con_data={d} onIntervalTask={this.onIntervalTask.bind(this)} index={i}/>
         });
-
         return <section className="wrapper">
-            <ConfigPanel s_view={s_view}/>
-
-            <div className={viewNode}>
-                <section className="panel row">
-                    <div className="panel-heading">
-                        <div className='panel-title'>二维码</div>
-                    </div>
-                    <div className="panel-wrapper">
-                        {codeNodes}
-                    </div>
-                </section>
+            <div className="row">
+                <div className="col-lg-12">
+                    <section className="panel row">
+                        <div className="panel-body">
+                            <span className="pull-right margin-right10" style={{marginBottom:"-5px"}}>
+                                {btnNode}
+                                <a href="javascript:void(0);" className="btn btn-primary btn-sm" onClick={onShowConfig.bind(this)}><i className="fa fa-cog fa-lg"/></a>
+                            </span>
+                        </div>
+                    </section>
+                </div>
             </div>
+            <div className="row">
+                {codeNodes}
+            </div>
+            <ModalPanel list={list} o_list={o_list} onClearInterval={this.onClearInterval.bind(this)} onIntervalTask={this.onIntervalTask.bind(this)}
+                        onStartBatchTask={this.onStartBatchTask.bind(this)} onStopBatchTask={this.onStopBatchTask.bind(this)} handleConfig={this.handleConfig.bind(this)}/>
         </section>
     }
 }
@@ -251,22 +238,21 @@ class QRcodePanel extends Component{
             return Y+M+D+h+m+s;
         }
 
-        const {qrcode,index,con_data:{id, product, price, image, timestamp, status}}=this.state;
+        const {qrcode,index,con_data:{product, price, image, timestamp, status}}=this.state;
         let ts = new Date(parseInt(timestamp));
-        let btnNode = status ? "disabled" : "";
+        let btnNode = !status ? "" : "disabled";
         return <div className="col-xs-4 col-sm-2 col-lg-1 code-box">
             <section className="panel row">
-                <div className="panel-heading row">
-                    <span className="pull-left"><strong>{id}</strong> {pd_map[product]}</span>
+                <header className="panel-heading row">
+                    <span className="pull-left">{pd_map[product]}</span>
                     <span className="pull-right text-danger"><strong>{price}</strong></span>
-                </div>
+                </header>
                 <div className="panel-body form-horizontal">
                     <div className="form-group text-center">
                         <img src={image ? image : qrcode} className="img-thumbnail"/>
                     </div>
                     <div className="form-group">
                         <h6><small>{timestamp ? formatDate(ts) : "未开始"}</small></h6>
-                        {status ? <CountDown time={120}/> : ""}
                         <div className="input-group input-group-sm">
                             <input className="form-control" type="text" disabled="true"/>
                             <div className="input-group-btn">
@@ -280,57 +266,59 @@ class QRcodePanel extends Component{
     }
 }
 
-class ConfigPanel extends Component{
+class ModalPanel extends Component{
     constructor(props){
         super(props);
     }
 
+    // 全部保存
+    onSaveAllConfig() {
+        let {list} = this.props;
+        if(list !== [] || list.length !== 0){
+            this.props.handleConfig("update",list);
+            this.props.onStopBatchTask();
+            this.props.onStartBatchTask()
+        }
+    }
+
+    // state更新
+    handleState(type,i,val) {
+        let {list} = this.props;
+        console.log("i: ",i,"; con: ",list);
+        list[i][type] = val;
+        this.setState({list});
+    }
+
+    // 关闭
+    onCancel(){
+        this.props.handleConfig("all");
+        $('#modal').modal("hide");
+    }
 
     render() {
-        const {list,start,s_view} = this.props;
+        const {list} = this.props;
         let inputNode = list.map((d,i)=>{
             // console.log(d);
             return <ConfigInput key={i} index={i} con_data={d} handleState={this.handleState.bind(this)}/>
         });
-
-        let btnNode = !start ? <a className="btn btn-success btn-sm" href="javascript:void(0);" onClick={this.onStartBatchTask.bind(this)}>
-            <i className="fa fa-play"/> 全部开始
-        </a> : <a className="btn btn-danger btn-sm" href="javascript:void(0);" onClick={this.onStopBatchTask.bind(this)}>
-            <i className="fa fa-stop"/> 全部结束
-        </a>;
-
-        let panelNode = <div className="col-lg-3">
-            <section className="panel">
-                <div className='panel-heading'>
-                    <div className="panel-title">
-                        设置
-                    <span className='pull-right'>
-                        {btnNode}
-                        {/*<a className="btn btn-primary btn-sm" onClick={this.onSaveAllConfig.bind(this)}>全部开始</a>*/}
-                    </span>
+        return <div className='modal fade' id='modal' tabIndex='-1' role='dialog' aria-labelledby='addModalLabel' data-backdrop="static">
+            <div className='modal-dialog'>
+                <div className='modal-content'>
+                    <div className='modal-header'>
+                        <h4 className='modal-title'>设置</h4>
                     </div>
-                </div>
-                <div className='panel-body row'>
-                    {inputNode}
-                </div>
-            </section>
-        </div>;
-        if(s_view){
-            panelNode = <div className="col-lg-1">
-                <section className="panel">
-                    <div className='panel-heading'>
-                        <div className="panel-title">
-                            {btnNode}
-                            {/*<a className="btn btn-primary btn-sm" onClick={this.onSaveAllConfig.bind(this)}>全部开始</a>*/}
-                        </div>
-                    </div>
-                    <div className='panel-body row'>
+
+                    <div className='modal-body row'>
                         {inputNode}
                     </div>
-                </section>
-            </div>;
-        }
-        return <div>{panelNode}</div>
+
+                    <div className='modal-footer'>
+                        <button className="btn btn-primary btn-sm" onClick={this.onSaveAllConfig.bind(this)}>全部保存</button>
+                        <button className='btn btn-default btn-sm' data-dismiss='modal' onClick={this.onCancel.bind(this)}>关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 }
 
@@ -390,38 +378,10 @@ class ConfigInput extends Component{
                 </div>
                 <input id={`account_${id}`} type="text" className="form-control input-sm" defaultValue={account}/>
                 <div className="input-group-btn">
-                    <a className="btn btn-success btn-sm" onClick={this.onChangeAccount.bind(this,id)}><i className="fa fa-play"/> 开始</a>
+                    <button type="button" className="btn btn-default btn-sm" onClick={this.onChangeAccount.bind(this,id)}>保存</button>
                 </div>
             </div>
         </div>
-    }
-}
-
-class CountDown extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {time: this.props.time};
-    }
-
-    componentDidMount() {
-        this.timerID = setInterval(() => this.tick(), 1000);
-    }
-
-    componentWillUnmount() {
-        clearInterval(this.timerID);
-    }
-
-    tick() {
-        this.setState({
-            time: this.state.time - 1
-        });
-        if(this.state.time <=0){
-            clearInterval(this.timerID);
-        }
-    }
-
-    render() {
-        return <h6><small>{this.state.time}</small></h6>
     }
 }
 

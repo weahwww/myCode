@@ -1,0 +1,35 @@
+.panel {
+  padding: 5px 5px;
+  border: 1px solid #d5d5d5;
+  border-radius: 2px;
+}
+.panel-heading {
+  margin: 0;
+  font-size: 16px;
+  font-family: "microsoft yahei";
+  line-height: 0;
+  border-bottom: 1px solid #e5e5e5;
+  color: #666;
+  background: #fafafa;
+}
+.panel-heading span.pull-left {
+  line-height: 28px;
+}
+.panel-heading span.pull-left i {
+  padding-right: 8px;
+  margin-right: 8px;
+  border-right: 1px solid #ddd;
+  color: #007aff;
+}
+.panel-heading span.pull-center {
+  display: block;
+  float: right;
+  width: 55%;
+}
+.panel-heading span.pull-center b {
+  font-size: 20px;
+  line-height: 29px;
+}
+.panel-heading .btn {
+  padding: 3px 12px;
+}
